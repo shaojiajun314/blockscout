@@ -1,0 +1,111 @@
+version: "2"
+
+volumes:
+  postgres: {}
+  # bootnode: {}
+
+services:
+  # bootnode:
+  #   image: ghcr.io/0xe3b0c4/bas-template-bsc:latest
+  #   ports:
+  #     - "8545:8545"
+  #     - "8546:8546"
+  #   command:
+  #     - "geth"
+  #     - "--cache=128"
+  #     - "--datadir=/data"
+  #     - "--genesis=/data/genesis.json"
+  #     - "--networkid=20221"
+  #     - "--nodekeyhex=633ab917d09441de38ae9251e79ced41df39a1c338842b826c18fb1773246e18"
+  #     - "--mine"
+  #     - "--password=/data/password.txt"
+  #     - "--allow-insecure-unlock"
+  #     - "--unlock=0x08fae3885e299c24ff9841478eb946f41023ac69"
+  #     - "--miner.etherbase=0x08fae3885e299c24ff9841478eb946f41023ac69"
+  #     - "--http"
+  #     - "--http.addr=0.0.0.0"
+  #     - "--http.api=debug,net,eth,web3,txpool"
+  #     - "--http.port=8545"
+  #     - "--http.corsdomain=*"
+  #     - "--http.vhosts=*"
+  #     - "--ws"
+  #     - "--ws.addr=0.0.0.0"
+  #     - "--ws.api=debug,net,eth,web3,txpool"
+  #     - "--ws.port=8546"
+  #     - "--ws.origins=*"
+  #     - "--syncmode=full"
+  #     - "--gcmode=archive"
+  #   volumes:
+  #     - "./genesis.json:/data/genesis.json:ro"
+  #     - "./keystore:/data/keystore:ro"
+  #     - "./password.txt:/data/password.txt"
+  #     - "bootnode:/data"
+  #   ulimits:
+  #     nproc: 65535
+  #     nofile:
+  #       soft: 2048
+  #       hard: 2048
+  
+  # faucet:
+  #   image: ghcr.io/0xe3b0c4/bas-template-bsc:latest
+  #   depends_on:
+  #     - bootnode
+  #   ports:
+  #     - "8080:8080"
+  #   command:
+  #     - "faucet"
+  #     - "--genesis=/data/genesis.json"
+  #     - "--bootnodes=enode://5c8e90050fabb7e14e4921dc107caf533140112245e7a231d0edc49861cd779760ad4804e7034952a5cc79422fa9d31c54e9a6141fb4995af7a6bfce7a39140f@bootnode:30303"
+  #     - "--network=20221"
+  #     - "--account.json=/data/keystore/UTC--2022-02-02T10-59-47.185Z--b891fe7b38f857f53a7b5529204c58d5c487280b"
+  #     - "--account.pass=/data/password.txt"
+  #     - "--rpcapi=ws://bootnode:8546"
+  #     - "--noauth=true"
+  #     - "--faucet.name=METAMASK"
+  #     - "--faucet.amount=10"
+  #     - "--faucet.tiers=5"
+  #   volumes:
+  #     - "./genesis.json:/data/genesis.json"
+  #     - "./keystore:/data/keystore"
+  #     - "./password.txt:/data/password.txt"
+  #   ulimits:
+  #     nproc: 65535
+  #     nofile:
+  #       soft: 65536
+  #       hard: 65536
+
+  db:
+    image: postgres:14
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 65535
+        hard: 65535
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_DB: "blockscout"
+    env_file:
+      - auth.env
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  blockscout:
+    depends_on:
+      - db
+    image: ghcr.io/0xe3b0c4/blockscout:dev
+    ports:
+      - "4000:4000"
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 65535
+        hard: 65535
+    command: [ "/bin/bash", "-c", "chmod +x /build.sh; while true; do sleep 30; done;" ]
+    env_file:
+      - common-blockscout.env
+    volumes:
+      - ./blockscout:/app
+      - ./build.sh:/build.sh
+      - ./genesis.json:/data/genesis.json:ro
